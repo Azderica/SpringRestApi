@@ -1,7 +1,11 @@
 package myepark.ebay.demoinfleanrestapi.events;
 
 import org.modelmapper.ModelMapper;
+import org.springframework.hateoas.EntityModel;
+import org.springframework.hateoas.Link;
 import org.springframework.hateoas.MediaTypes;
+import org.springframework.hateoas.server.mvc.ControllerLinkBuilder;
+import org.springframework.hateoas.server.mvc.WebMvcLinkBuilder;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.Errors;
@@ -11,6 +15,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 
 import javax.validation.Valid;
 import java.net.URI;
+import java.util.Arrays;
+import java.util.List;
 
 import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
 import static org.springframework.http.ResponseEntity.badRequest;
@@ -30,24 +36,29 @@ public class EventController {
     }
 
     @PostMapping
-    public ResponseEntity createEvent(@RequestBody @Valid EventDto eventDto, Errors errors) {
-
-        // 유효하지 않은 값이 request로 들어오면 302 에러 발생시키기
-        // Errors 객체는 자바 빈 표준을 준수하지 않기 때문에 Response에 담을 수 없다.
-        if(errors.hasErrors()) {
-            return badRequest().body(errors);
+    public ResponseEntity createEvent(@RequestBody @Valid EventCreateRequest createRequest,
+                                      Errors errors) {
+        if (errors.hasErrors()) {
+            return badRequest(errors);
         }
 
-        eventValidator.validate(eventDto, errors);
-
-        if(errors.hasErrors()) {
-            return badRequest().body(errors);
+        createRequestValidator.validate(createRequest, errors);
+        if (errors.hasErrors()) {
+            return badRequest(errors);
         }
 
-        Event event = modelMapper.map(eventDto, Event.class);
-        event.update();
-        Event newEvent = this.eventRepository.save(event);
-        URI createdUri = linkTo((EventController.class)).slash(newEvent.getId()).toUri();
-        return ResponseEntity.created(createdUri).body(event);
+        Event event = modelMapper.map(createRequest, Event.class);
+        event.adjust();
+        Event savedEvent = eventRepository.save(event);
+
+        ControllerLinkBuilder selfLinkBuilder = linkTo(EventController.class).slash(savedEvent.getId());
+        URI uri = selfLinkBuilder.toUri();
+
+        EventResource resource = new EventResource(event);
+        resource.add(new Link("/docs/index.html#resources-events-create").withRel("profile"));
+        resource.add(linkTo(EventController.class).withRel("query-events"));
+        resource.add(selfLinkBuilder.withRel("update-event"));
+
+        return ResponseEntity.created(uri).body(resource);
     }
 }
