@@ -8,41 +8,28 @@ import org.springframework.validation.Errors;
 
 import java.io.IOException;
 
-/**
- *  Errors 객체를 Serialization할 때 이 객체를 사용한다.
- */
 @JsonComponent
 public class ErrorsSerializer extends JsonSerializer<Errors> {
 
     @Override
     public void serialize(Errors errors, JsonGenerator jsonGenerator, SerializerProvider serializerProvider) throws IOException {
         jsonGenerator.writeStartArray();
-        errors.getFieldErrors().forEach(e -> {
+        errors.getFieldErrors().stream().forEach(e -> {
             try {
                 jsonGenerator.writeStartObject();
-                jsonGenerator.writeStringField("field", e.getField());
                 jsonGenerator.writeStringField("objectName", e.getObjectName());
-                jsonGenerator.writeStringField("code", e.getCode());
+                jsonGenerator.writeStringField("field", e.getField());
                 jsonGenerator.writeStringField("defaultMessage", e.getDefaultMessage());
+
                 Object rejectedValue = e.getRejectedValue();
                 if (rejectedValue != null) {
                     jsonGenerator.writeStringField("rejectedValue", rejectedValue.toString());
+                } else {
+                    jsonGenerator.writeStringField("rejectedValue", "");
                 }
                 jsonGenerator.writeEndObject();
             } catch (IOException e1) {
-                e1.printStackTrace();
-            }
-        });
-
-        errors.getGlobalErrors().forEach(e -> {
-            try {
-                jsonGenerator.writeStartObject();
-                jsonGenerator.writeStringField("objectName", e.getObjectName());
-                jsonGenerator.writeStringField("code", e.getCode());
-                jsonGenerator.writeStringField("defaultMessage", e.getDefaultMessage());
-                jsonGenerator.writeEndObject();
-            } catch (IOException e1) {
-                e1.printStackTrace();
+                throw new RuntimeException(e1);
             }
         });
         jsonGenerator.writeEndArray();

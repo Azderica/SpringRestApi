@@ -1,53 +1,164 @@
 package myepark.ebay.demoinfleanrestapi.events;
 
+import lombok.extern.slf4j.Slf4j;
+import myepark.ebay.demoinfleanrestapi.common.ErrorResource;
+import myepark.ebay.demoinfleanrestapi.user.CurrentUser;
+import myepark.ebay.demoinfleanrestapi.user.User;
 import org.modelmapper.ModelMapper;
-import org.springframework.hateoas.MediaTypes;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PagedResourcesAssembler;
+import org.springframework.hateoas.Link;
+import org.springframework.hateoas.PagedResources;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.stereotype.Controller;
-import org.springframework.validation.Errors;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.validation.BindingResult;
+import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
 import java.net.URI;
+import java.util.Optional;
 
-import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
-import static org.springframework.http.ResponseEntity.badRequest;
+import static org.springframework.hateoas.mvc.ControllerLinkBuilder.linkTo;
+import static org.springframework.hateoas.mvc.ControllerLinkBuilder.methodOn;
 
-@Controller
-@RequestMapping(value = "/api/events", produces = MediaTypes.HAL_JSON_VALUE)
+
+@RestController
+@RequestMapping(value = "/api/events")
+@Slf4j
 public class EventController {
 
-    private final EventRepository eventRepository;
     private final ModelMapper modelMapper;
+
+    private final EventRepository eventRepository;
+
     private final EventValidator eventValidator;
 
-    public EventController(EventRepository eventRepository, ModelMapper modelMapper, EventValidator eventValidator) {
-        this.eventRepository = eventRepository;
+    public EventController(ModelMapper modelMapper, EventRepository eventRepository, EventValidator eventValidator) {
         this.modelMapper = modelMapper;
+        this.eventRepository = eventRepository;
         this.eventValidator = eventValidator;
     }
 
+    @GetMapping
+    public ResponseEntity all(Pageable pageable, PagedResourcesAssembler<Event> assembler, @CurrentUser User currentUser) {
+        if (currentUser == null) {
+            log.debug("Current user doesn't exist");
+        } else {
+            log.debug("Current user {} {}", currentUser.getId(), currentUser.getEmail());
+        }
+
+        Page<Event> events = eventRepository.findAll(pageable);
+        PagedResources<EventResource> resources = assembler.toResource(events, entity -> new EventResource(entity));
+        resources.add(linkTo(EventController.class).withRel("events"));
+        resources.add(linkTo(methodOn(EventController.class).getEvent(null, null)).withRel("get-an-event"));
+        if (currentUser != null) {
+            resources.add(linkTo(methodOn(EventController.class).createEvent(null, null, null)).withRel("create-new-event"));
+        }
+        resources.add(linkToProfile("resources-events-list"));
+        return ResponseEntity.ok().body(resources);
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity getEvent(@PathVariable Integer id, @CurrentUser User currentUser) {
+        Optional<Event> byId = eventRepository.findById(id);
+        if (!byId.isPresent()) {
+            return notFoundResponse();
+        }
+
+        Event event = byId.get();
+        EventResource eventResource = new EventResource(event);
+        if (currentUser != null && currentUser.equals(event.getManager())) {
+            eventResource.add(linkToUpdate(event));
+        }
+        eventResource.add(linkToProfile("resources-events-get"));
+        return ResponseEntity.ok().body(eventResource);
+    }
+
     @PostMapping
-    public ResponseEntity createEvent(@RequestBody @Valid EventDto eventDto, Errors errors) {
-
-        // 유효하지 않은 값이 request로 들어오면 302 에러 발생시키기
-        // Errors 객체는 자바 빈 표준을 준수하지 않기 때문에 Response에 담을 수 없다.
-        if(errors.hasErrors()) {
-            return badRequest().body(errors);
+    public ResponseEntity createEvent(@Valid @RequestBody EventDto.CreateOrUpdate eventCreate,
+                                      BindingResult errors,
+                                      @CurrentUser User currentUser) {
+        if (errors.hasErrors()) {
+            return badRequestResponse(errors);
         }
 
-        eventValidator.validate(eventDto, errors);
+        Event event = modelMapper.map(eventCreate, Event.class);
+        event.update(currentUser);
 
-        if(errors.hasErrors()) {
-            return badRequest().body(errors);
+        eventValidator.validate(event, errors);
+        if (errors.hasErrors()) {
+            return badRequestResponse(errors);
         }
 
-        Event event = modelMapper.map(eventDto, Event.class);
+        Event newEvent = eventRepository.save(event);
+        EventResource eventResource = new EventResource(newEvent);
+        eventResource.add(linkToProfile("resources-events-create"));
+        eventResource.add(linkToUpdate(newEvent));
+
+        URI newEventLocation = linkTo(methodOn(this.getClass()).getEvent(newEvent.getId(), null)).toUri();
+        return ResponseEntity.created(newEventLocation).body(eventResource);
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity update(@PathVariable Integer id,
+                                 @Valid @RequestBody EventDto.CreateOrUpdate eventDto,
+                                 BindingResult errors,
+                                 @CurrentUser User currentUser) {
+        if (errors.hasErrors()) {
+            return badRequestResponse(errors);
+        }
+
+        Optional<Event> byId = this.eventRepository.findById(id);
+        if (!byId.isPresent()) {
+            return notFoundResponse();
+        }
+
+        Event event = byId.get();
+        if (currentUser != null && !currentUser.equals(event.getManager())) {
+            return new ResponseEntity(HttpStatus.FORBIDDEN);
+        }
+
+        modelMapper.map(eventDto, event);
         event.update();
-        Event newEvent = this.eventRepository.save(event);
-        URI createdUri = linkTo((EventController.class)).slash(newEvent.getId()).toUri();
-        return ResponseEntity.created(createdUri).body(event);
+
+        eventValidator.validate(event, errors);
+        if (errors.hasErrors()) {
+            return badRequestResponse(errors);
+        }
+
+        EventResource eventResource = new EventResource(event);
+        eventResource.add(linkToProfile("resources-events-update"));
+        return ResponseEntity.ok().body(eventResource);
+    }
+
+    @DeleteMapping("/{id")
+    public ResponseEntity delete(@PathVariable Integer id) {
+        throw new UnsupportedOperationException();
+    }
+
+    @PostMapping("/{id}/publish")
+    public ResponseEntity publish(@PathVariable Integer id) {
+        throw new UnsupportedOperationException();
+    }
+
+    private ResponseEntity<Object> notFoundResponse() {
+        return ResponseEntity.notFound().build();
+    }
+
+    private ResponseEntity<ErrorResource> badRequestResponse(BindingResult errors) {
+        return ResponseEntity.badRequest().body(new ErrorResource(errors));
+    }
+
+    private Link linkToProfile(String anchor) {
+        var linkValue = "</docs/index.html>; rel=\"profile\";";
+        if (anchor != null) {
+            linkValue = "</docs/index.html#" + anchor + ">; rel=\"profile\";";
+        }
+        return Link.valueOf(linkValue);
+    }
+
+    private Link linkToUpdate(Event newEvent) {
+        return linkTo(methodOn(EventController.class).update(newEvent.getId(), null, null, null)).withRel("update");
     }
 }

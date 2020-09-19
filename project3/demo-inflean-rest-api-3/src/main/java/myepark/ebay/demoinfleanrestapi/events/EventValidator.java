@@ -2,39 +2,47 @@ package myepark.ebay.demoinfleanrestapi.events;
 
 import org.springframework.stereotype.Component;
 import org.springframework.validation.Errors;
+import org.springframework.validation.Validator;
 
 import java.time.LocalDateTime;
 
 @Component
-public class EventValidator {
+public class EventValidator implements Validator {
 
-    // reject() : field 에러에 들어가게 된다.
-    // rejectValue() : global 에러에 들어가게 된다.
+    @Override
+    public boolean supports(Class<?> clazz) {
+        return Event.class.equals(clazz);
+    }
 
-    public void validate(EventDto eventDto, Errors errors) {
-        if(eventDto.getBasePrice() > eventDto.getMaxPrice() && eventDto.getMaxPrice() != 0) {
-            errors.reject("wrongPrices", "Values for Prices are wrong.");
+    @Override
+    public void validate(Object target, Errors errors) {
+        Event event = (Event)target;
+        validateEndEventDateTime(errors, event);
+        validateBeginDateTime(errors, event);
+        validateCloseEnrollmentDateTime(errors, event);
+    }
+
+    private void validateCloseEnrollmentDateTime(Errors errors, Event event) {
+        LocalDateTime closeEnrollmentDateTime = event.getCloseEnrollmentDateTime();
+        if (closeEnrollmentDateTime.isBefore(event.getBeginEnrollmentDateTime())) {
+            errors.rejectValue("closeEnrollmentDateTime", "wrong.datetime");
         }
+    }
 
-        LocalDateTime endEventDateTime = eventDto.getEndEventDateTime();
-        if(endEventDateTime.isBefore(eventDto.getBeginEventDateTime()) ||
-                endEventDateTime.isBefore(eventDto.getCloseEnrollmentDateTime()) ||
-                endEventDateTime.isBefore(eventDto.getBeginEnrollmentDateTime())) {
-            errors.rejectValue("endEventDateTime", "wrongValue", "endEventDateTime is wrong.");
+    private void validateBeginDateTime(Errors errors, Event event) {
+        LocalDateTime beginEventDateTime = event.getBeginEventDateTime();
+        if (beginEventDateTime.isBefore(event.getBeginEnrollmentDateTime()) ||
+                beginEventDateTime.isBefore(event.getCloseEnrollmentDateTime())) {
+            errors.rejectValue("beginEventDateTime", "wrong.datetime");
         }
+    }
 
-        LocalDateTime beginEventDateTime = eventDto.getBeginEventDateTime();
-        if(beginEventDateTime.isBefore(eventDto.getEndEventDateTime()) ||
-                beginEventDateTime.isBefore(eventDto.getCloseEnrollmentDateTime())) {
-            errors.rejectValue("beginEventDateTime", "wrongValue", "beginEventDateTime is wrong.");
+    private void validateEndEventDateTime(Errors errors, Event event) {
+        LocalDateTime endEventDateTime = event.getEndEventDateTime();
+        if (endEventDateTime.isBefore(event.getBeginEventDateTime()) ||
+                endEventDateTime.isBefore(event.getBeginEnrollmentDateTime()) ||
+                endEventDateTime.isBefore(event.getCloseEnrollmentDateTime())) {
+            errors.rejectValue("endEventDateTime", "wrong.datetime");
         }
-
-        LocalDateTime closeEnrollmentDateTime = eventDto.getCloseEnrollmentDateTime();
-        if(closeEnrollmentDateTime.isBefore(eventDto.getBeginEnrollmentDateTime()) ||
-                closeEnrollmentDateTime.isBefore(eventDto.getBeginEventDateTime())) {
-            errors.rejectValue("closeEnrollmentDateTime", "wrongValue", "closeEnrollmentDateTime is wrong.");
-        }
-
     }
 }
-

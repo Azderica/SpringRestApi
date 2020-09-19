@@ -11,34 +11,38 @@ import javax.validation.constraints.NotNull;
 import java.time.LocalDateTime;
 
 @Data @Builder
-@NoArgsConstructor @AllArgsConstructor
 public class EventDto {
 
-    @NotEmpty
-    private String name;        // 경매 이름
+    @Data
+    @Builder @AllArgsConstructor @NoArgsConstructor
+    public static class CreateOrUpdate {
 
-    @NotEmpty
-    private String description; // 경매에 대한 설명
+        @NotEmpty
+        String name;
 
-    @NotNull
-    private LocalDateTime beginEnrollmentDateTime;      // 경매 등록 날짜
+        String description;
 
-    @NotNull
-    private LocalDateTime closeEnrollmentDateTime;      // 경매 종료 날짜
+        @NotNull
+        LocalDateTime beginEnrollmentDateTime;
 
-    @NotNull
-    private LocalDateTime beginEventDateTime;   // 경매 시작
+        @NotNull
+        LocalDateTime closeEnrollmentDateTime;
 
-    @NotNull
-    private LocalDateTime endEventDateTime;     // 경매 종료
-    private String location;            // 경매 장소 (if location == null then (online))
+        @NotNull
+        LocalDateTime beginEventDateTime;
 
-    @Min(0)
-    private int basePrice;              // 최소 가격
+        @NotNull
+        LocalDateTime endEventDateTime;
 
-    @Min(0)
-    private int maxPrice;               // 최대 가격 (경매가가 최대 가격과 같으면 바로 낙찰)
+        String location;
 
-    @Min(0)
-    private int limitOfEnrollment;      // 최대 등록 횟수
+        @Min(0)
+        Integer basePrice;
+
+        @Min(0)
+        Integer maxPrice;
+
+        @Min(0)
+        Integer limitOfEnrollment;
+    }
 }
