@@ -1,13 +1,13 @@
 package me.whiteship.natural.common;
 
 import me.whiteship.natural.index.IndexController;
+import org.springframework.hateoas.EntityModel;
 import org.springframework.hateoas.Link;
-import org.springframework.hateoas.Resource;
 import org.springframework.validation.Errors;
 
-import static org.springframework.hateoas.mvc.ControllerLinkBuilder.linkTo;
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
 
-public class ErrorResource extends Resource<Errors> {
+public class ErrorResource extends EntityModel<Errors> {
 
     public ErrorResource(Errors content, Link... links) {
         super(content, links);

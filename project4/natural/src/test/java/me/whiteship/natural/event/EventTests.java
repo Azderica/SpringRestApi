@@ -1,7 +1,7 @@
 package me.whiteship.natural.event;
 
 import me.whiteship.natural.common.AppSecurityProperties;
-import me.whiteship.natural.common.BaseControllerTests;
+import me.whiteship.natural.common.BaseTest;
 import me.whiteship.natural.common.Description;
 import me.whiteship.natural.user.User;
 import me.whiteship.natural.user.UserRepository;
@@ -36,7 +36,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-public class EventControllerTests extends BaseControllerTests {
+public class EventTests extends BaseTest {
 
     @Autowired
     UserService userService;

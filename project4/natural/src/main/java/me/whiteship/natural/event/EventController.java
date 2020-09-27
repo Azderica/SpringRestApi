@@ -18,8 +18,8 @@ import javax.validation.Valid;
 import java.net.URI;
 import java.util.Optional;
 
-import static org.springframework.hateoas.mvc.ControllerLinkBuilder.linkTo;
-import static org.springframework.hateoas.mvc.ControllerLinkBuilder.methodOn;
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
 
 @RestController
 @RequestMapping(value = "/api/events")
@@ -47,7 +47,7 @@ public class EventController {
         }
 
         Page<Event> events = eventRepository.findAll(pageable);
-        var resources = assembler.toResource(events, entity -> new EventResource(entity));
+        var resources = assembler.toModel(events, entity -> new EventResource(entity));
         resources.add(linkTo(EventController.class).withRel("events"));
         resources.add(linkTo(methodOn(EventController.class).getEvent(null, null)).withRel("get-an-event"));
         if (currentUser != null) {

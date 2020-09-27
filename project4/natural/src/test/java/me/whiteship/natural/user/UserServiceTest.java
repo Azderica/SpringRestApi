@@ -1,5 +1,6 @@
 package me.whiteship.natural.user;
 
+import me.whiteship.natural.common.BaseTest;
 import me.whiteship.natural.common.Description;
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -12,7 +13,7 @@ import java.util.Set;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyString;
 
-public class UserServiceTest {
+public class UserServiceTest extends BaseTest {
 
     @Description("Load existing user")
     @Test

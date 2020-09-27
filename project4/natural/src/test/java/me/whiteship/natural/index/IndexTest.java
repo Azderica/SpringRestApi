@@ -1,6 +1,6 @@
 package me.whiteship.natural.index;
 
-import me.whiteship.natural.common.BaseControllerTests;
+import me.whiteship.natural.common.BaseTest;
 import org.junit.Test;
 
 import static org.springframework.restdocs.hypermedia.HypermediaDocumentation.linkWithRel;
@@ -9,7 +9,7 @@ import static org.springframework.restdocs.mockmvc.MockMvcRestDocumentation.docu
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-public class IndexControllerTest extends BaseControllerTests {
+public class IndexTest extends BaseTest {
 
     @Test
     public void root() throws Exception {

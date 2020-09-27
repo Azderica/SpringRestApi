@@ -21,7 +21,7 @@ import org.springframework.web.context.WebApplicationContext;
 @ActiveProfiles("test")
 @Import({TestRestDocConfiguration.class})
 @Ignore
-public class BaseControllerTests {
+public class BaseTest {
 
     @Autowired
     protected MockMvc mockMvc;
